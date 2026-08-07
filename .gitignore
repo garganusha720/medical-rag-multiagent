@@ -141,3 +141,21 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+# Python
+__pycache__/
+*.pyc
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+.env.local
+
+# Data files (per project plan)
+data/raw/
+data/embeddings/
+*.npy
+
+# OS
+.DS_Store
