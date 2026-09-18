@@ -224,26 +224,3 @@ Generated charts saved to `results/plots/`:
 
 ---
 
-## 💡 Key Architectural Questions & Solutions
-
-### Q1: Why use a Multi-Agent architecture instead of a single LLM prompt?
-A single LLM call is prone to hallucinations, cannot verify whether retrieved passages actually answer the clinical query, and has no recovery mechanism if the first search is noisy. Our LangGraph pipeline separates concerns:
-- **Supervisor** sets specialized search filters based on query intent (e.g., boosting PubMed for COVID trials vs MedQuAD for drug monographs).
-- **Critic** evaluates retrieved chunks *before* generation, discarding off-topic noise and triggering an automatic retry with an expanded search window if evidence is weak.
-- **Synthesizer** focuses exclusively on strictly cited generation from verified text.
-- **Citation Agent** guarantees end-to-end auditability and provenance.
-
-### Q2: Why is Hybrid Retrieval (Dense + BM25) essential for medical queries?
-Dense vector search excels at conceptual matching (e.g., mapping *"trouble catching breath after illness"* to *"post-viral dyspnea"*), but often struggles with exact pharmaceutical brand names, rare disease acronyms (e.g., *PASC, ALL, SGLT2*), and specific gene variants. BM25 guarantees exact keyword recall for clinical terminology, while dense embeddings capture semantics. Combining both with score normalization ($\alpha=0.6$) achieves superior Recall@K and MRR@10.
-
-### Q3: How does the Critic Agent prevent clinical hallucinations?
-The Critic inspects retrieved chunks against the query using a structured JSON evaluation prompt, scoring each candidate from 1 to 5. Chunks scoring below 3 (tangential or irrelevant) are discarded. If fewer than 2 relevant chunks survive, the Critic forces a retry loop. If context remains insufficient after 2 retries, the system explicitly declares insufficient context rather than hallucinating plausible-sounding medical advice.
-
-### Q4: Why token-based chunking with overlap rather than character or sentence chunking?
-Medical articles frequently contain complex multi-clause sentences, clinical trial parameter tables, and dosage schedules. Character-based chunking can slice critical numbers or medical terms in half. Using `tiktoken` (`cl100k_base`) ensures clean token boundaries matching LLM context windows. Overlapping chunks (32 tokens) ensure clinical facts spanning chunk borders are not lost during semantic indexing.
-
-### Q5: How is 100% claim traceability achieved?
-The Synthesizer prompt strictly enforces inline markers `[c0]`, `[c1]`, etc. immediately after any medical statement. The Citation Agent parses these markers, validates that the referenced index exists in the Critic-approved chunks, extracts the exact source URL and title, and computes the `citation_coverage` metric. Every card rendered in the UI directly links to the official NIH / PubMed article.
-
-### Q6: How does Qdrant dual-mode optimize development and deployment?
-Qdrant Cloud free tier provides 1GB storage, which can be exhausted during rapid experimentation with multiple embedding models. Our `MedicalVectorStore` supports `QDRANT_MODE=local` (embedded on-disk or local Docker) for zero-cost, offline development and testing, reserving the Qdrant Cloud cluster for production staging. Additionally, an automated background keep-alive ping prevents free tier cluster suspension after 1 week of inactivity.
