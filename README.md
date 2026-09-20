@@ -1,226 +1,45 @@
-# 🏥 Medical RAG Multi-Agent: Production-Grade Medical AI Assistant
 
-A production-grade, citation-backed, hallucination-free Medical AI Assistant specifically designed for clinical and consumer health queries. Powered by a verified corpus of **NIH (MedQuAD, MedlinePlus)** and **PubMed** literature, orchestrated via **LangGraph multi-agent architecture**, and served via **FastAPI** with real-time streaming to **Next.js**.
+# ==========================================
+# Medical RAG Multi-Agent — Environment Keys
+# ==========================================
 
----
+# --- Groq (LLM inference) ---
+GROQ_API_KEY=
+GROQ_MODEL=qwen/qwen3.8-27b
 
-## 🎯 The Core Problem & Solution
+# --- Cohere (Embeddings — primary) ---
+COHERE_API_KEY=
 
-| Standard General LLMs (ChatGPT) | Medical RAG Multi-Agent System |
-| :--- | :--- |
-| ❌ Hallucinates medical facts & fake drug dosages | ✅ **Grounded strictly** in verified NIH & PubMed corpus |
-| ❌ No verifiable citations or document provenance | ✅ **Every clinical claim** mapped to inline citations `[c0]`, `[c1]` |
-| ❌ Guesses when medical data is absent | ✅ Explicitly responds **"I don't know / Insufficient context"** |
-| ❌ Single unverified inference call | ✅ **5 specialized agents** with Critic verification & retry loops |
-
----
-
-## 🏗️ System Architecture
-
-```
-User Query: "What are treatments for Long COVID?"
-                         │
-                         ▼
-             ┌─────────────────────────┐
-             │    Next.js Frontend     │  (Vercel AI SDK, shadcn/ui, Supabase Auth)
-             └───────────┬─────────────┘
-                         │ JWT Token + Streaming Request
-                         ▼
-             ┌─────────────────────────┐
-             │     FastAPI Backend     │  (JWT Verification, Request Telemetry, CORS)
-             └───────────┬─────────────┘
-                         │
-                         ▼
-             ┌─────────────────────────┐
-             │ [1] Supervisor Agent    │  ← LangGraph Node 1
-             │ Classifies: "covid"     │  (Groq qwen3.8-27b: Sets top_k=8, alpha=0.65)
-             └───────────┬─────────────┘
-                         │
-                         ▼
-             ┌─────────────────────────┐
-             │ [2] Retrieval Agent     │  ← LangGraph Node 2
-             │ Hybrid Dense + Sparse   │  (BM25Okapi + Qdrant Cosine Vector Search)
-             └───────────┬─────────────┘
-                         │
-                         ▼
-             ┌─────────────────────────┐
-             │ [3] Critic Agent        │  ← LangGraph Node 3
-             │ Scores Chunks (1 - 5)   │  (Filters score < 3; triggers dynamic retry if < 2 pass)
-             └───────────┬─────────────┘
-                         │ Passing Chunks
-                         ▼
-             ┌─────────────────────────┐
-             │ [4] Synthesizer Agent   │  ← LangGraph Node 4
-             │ Strictly Grounded LLM   │  (Generates clinical answer with [c0], [c1] markers)
-             └───────────┬─────────────┘
-                         │
-                         ▼
-             ┌─────────────────────────┐
-             │ [5] Citation Agent      │  ← LangGraph Node 5
-             │ Maps Claims to Sources  │  (Resolves markers → URL, title, snippet & coverage %)
-             └───────────┬─────────────┘
-                         │
-                         ▼
-             ┌─────────────────────────┐
-             │  FastAPI Token Stream   │  (x-vercel-ai-ui-message-stream: v1)
-             └─────────────────────────┘
-```
-
----
-
-## 📚 Knowledge Base Corpus (3 Verified Sources)
-
-1. **MedQuAD (NIH)**: 14,344 deduplicated Q&A pairs spanning 12 NIH institutes (GARD rare diseases, GHR genetics, CancerGov, NIDDK, NINDS, CDC).
-2. **MedlinePlus (NLM)**: 1,014 full-length comprehensive health topic articles (avg 351 words) providing rich contextual retrieval.
-3. **PubMed (NCBI Entrez)**: 19,089 recent peer-reviewed clinical research abstracts (2020–2026) focusing on COVID-19, Long COVID, immunotherapies, and clinical trials.
-* **Total Merged Corpus**: **33,842 verified documents** (7.7+ million words) → **62,355 token-based chunks**.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technologies | Purpose |
-| :--- | :--- | :--- |
-| **Multi-Agent Orchestration** | `LangGraph`, `LangChain` | StateGraph workflow, conditional loops, retry routing |
-| **LLM Inference** | `Groq` (`qwen/qwen3.8-27b` via `GROQ_MODEL` env var) | Ultra-fast classification, critic validation, and synthesis |
-| **Dense Embeddings** | `Cohere` (`embed-english-v3.0`, 1024d) & `MiniLM-L6-v2` (384d) | High-accuracy semantic retrieval (API & local zero-cost modes) |
-| **Sparse Retrieval** | `rank-bm25` (`BM25Okapi`) | Exact medical keyword, drug name, and acronym matching |
-| **Vector Store** | `Qdrant` (Local on-disk / Docker & Qdrant Cloud) | Cosine similarity vector search with metadata payload filtering |
-| **Backend API** | `FastAPI`, `Uvicorn`, `Pydantic` | Async REST endpoints, Vercel AI SDK SSE token streaming |
-| **Auth & Database** | `Supabase` (PostgreSQL, GoTrue JWT) | User sessions, message history, Google OAuth |
-| **Evaluation** | `pytest`, `rouge-score`, `matplotlib`, `seaborn` | Automated Recall@K, MRR@10, and ROUGE-L benchmarks |
-
----
-
-## ⚙️ Prerequisites & Environment Variables
-
-Copy `.env.example` to `.env` and configure your keys:
-
-```bash
-# --- LLM & Inference ---
-GROQ_API_KEY=your_groq_api_key                # Free at https://console.groq.com/keys
-
-# --- Embeddings ---
-COHERE_API_KEY=your_cohere_api_key            # Free trial at https://dashboard.cohere.com/api-keys
-EMBEDDING_MODEL=minilm                        # 'minilm' (local zero-cost) or 'cohere' (1024-dim API)
-
-# --- NCBI PubMed API ---
-NCBI_API_KEY=your_ncbi_api_key                # Free at https://www.ncbi.nlm.nih.gov/account/settings/
+# --- NCBI / PubMed (Data ingestion) ---
+NCBI_API_KEY=
 NCBI_EMAIL=your_email@example.com
 
-# --- Vector Database ---
-QDRANT_MODE=local                             # 'local' for embedded/Docker or 'cloud' for Qdrant Cloud
+# --- Qdrant (Vector store) ---
+QDRANT_MODE=local
 QDRANT_LOCAL_URL=http://localhost:6333
-QDRANT_URL=https://your-cluster.qdrant.tech
-QDRANT_API_KEY=your_qdrant_api_key
-QDRANT_PING_INTERVAL_DAYS=5                   # Keep-alive ping preventing free tier suspension
+QDRANT_URL=
+QDRANT_API_KEY=
 
-# --- Supabase ---
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_KEY=your_supabase_service_key
+# --- Supabase (Auth + Database) ---
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_KEY=
 
-# --- Retrieval Hyperparameters ---
+# --- LangSmith (Tracing — optional) ---
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=
+LANGCHAIN_PROJECT=medical-rag
+
+# --- App Config ---
+EMBEDDING_MODEL=cohere
 CHUNK_SIZE=256
 CHUNK_OVERLAP=32
-RETRIEVAL_METHOD=hybrid                       # 'hybrid', 'dense', 'bm25', 'mmr'
+RETRIEVAL_METHOD=hybrid
 HYBRID_ALPHA=0.6
 TOP_K=5
 PUBMED_FETCH_LIMIT=20000
-```
 
----
-
-## 🚀 Step-by-Step Setup & Execution
-
-### 1. Setup Environment & Install Dependencies
-```bash
-# Create and activate virtual environment
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# Upgrade pip & install dependencies
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-### 2. Ingest Data Corpus (Phase 1)
-```bash
-# 1. Parse MedQuAD dataset (14,344 Q&A pairs)
-python -m ingestion.medquad_parser
-
-# 2. Parse MedlinePlus XML (1,014 full articles)
-python -m ingestion.medlineplus_parser
-
-# 3. Fetch PubMed abstracts via NCBI API (19,089 abstracts)
-python -m ingestion.pubmed_fetcher
-
-# 4. Merge & deduplicate all 3 sources into unified corpus
-python -m ingestion.merge_corpus
-```
-
-### 3. Chunking & Embeddings (Phase 2)
-```bash
-# Generate 62,355 token-based chunks with overlap
-python -m retrieval.chunker
-
-# Generate dense vector embeddings (MiniLM local or Cohere API)
-python -m retrieval.embedder --model minilm
-```
-
-### 4. Run Unit & Integration Tests (22 Tests)
-```bash
-pytest tests/ -v
-```
-
-### 5. Launch FastAPI Backend Server
-```bash
-uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
-```
-* **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
-* **Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
-
-### 6. Docker Quick Start (Recommended for Collaboration)
-
-If both Person A and Person B are working together, Docker ensures identical environments:
-
-```bash
-# Start all services (backend + Qdrant + frontend when ready)
-docker-compose up --build
-
-# Or start only backend + Qdrant (Person A workflow)
-docker-compose up qdrant backend --build
-
-# Or start only Qdrant for local development
-docker-compose up qdrant
-```
-
-| Service | URL | Purpose |
-| :--- | :--- | :--- |
-| Backend API | http://localhost:8000 | FastAPI + LangGraph pipeline |
-| Qdrant Dashboard | http://localhost:6333/dashboard | Vector store UI |
-| Frontend | http://localhost:3000 | Next.js chat UI (when available) |
-
-> **Note:** Data directory is mounted as a volume — `data/processed/`, `data/embeddings/` are shared between host and container. Run the ingestion pipeline on your host first, then `docker-compose up` will pick up the data automatically.
-
----
-
-## 📊 Evaluation & Benchmarks (Phase 7)
-
-Run the automated quantitative evaluation matrix across all 8 configurations:
-```bash
-# Run 8-configuration evaluation benchmark
-python -m eval.evaluate --queries 100
-
-# Generate publication-quality visualization figures
-python -m eval.plots
-```
-
-Generated charts saved to `results/plots/`:
-- `recall_k.png`: Recall@1, Recall@5, Recall@10 across retrieval configurations
-- `rouge_l.png`: Answer generation quality (ROUGE-L F1) vs ground truth NIH references
-- `mrr_chart.png`: Mean Reciprocal Rank (MRR@10) across Dense vs Hybrid vs MMR
-- `citation_coverage.png`: Fact citation coverage percentage across configurations
-
----
-
+# --- Frontend (frontend/.env.local — NOT this file) ---
+# NEXT_PUBLIC_API_URL=
+# NEXT_PUBLIC_SUPABASE_URL=
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=
