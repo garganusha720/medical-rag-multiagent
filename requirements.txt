@@ -1,0 +1,57 @@
+# ============================================
+# Medical RAG Multi-Agent — Python Dependencies
+# ============================================
+# Compatible with Python 3.13 (uses pre-built wheels)
+
+# --- Core Backend Framework ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.6
+python-multipart>=0.0.9
+python-dotenv>=1.0.1
+
+# --- Data Ingestion & Processing ---
+pandas>=2.2.3
+lxml>=5.3.0
+biopython>=1.84
+requests>=2.32.3
+
+# --- Tokenizer & Chunking ---
+tiktoken>=0.7.0
+
+# --- Embeddings ---
+cohere>=5.9.0
+sentence-transformers>=3.0.1
+openai>=1.43.0
+numpy>=2.1.0
+
+# --- Vector Store ---
+qdrant-client>=1.11.1
+
+# --- Sparse Retrieval ---
+rank-bm25>=0.2.2
+
+# --- LLM & Agents ---
+groq>=0.11.0
+langgraph>=0.2.16
+langchain>=0.2.16
+langchain-core>=0.2.38
+langchain-groq>=0.1.9
+langsmith>=0.1.110
+
+# --- Auth & Database ---
+supabase>=2.7.2
+python-jose[cryptography]>=3.3.0
+httpx>=0.27.2
+
+# --- Evaluation ---
+rouge-score>=0.1.2
+matplotlib>=3.9.2
+seaborn>=0.13.2
+
+# --- Testing ---
+pytest>=8.3.2
+pytest-asyncio>=0.23.8
+
+# --- Utilities ---
+tqdm>=4.66.5
+pydantic>=2.9.1
