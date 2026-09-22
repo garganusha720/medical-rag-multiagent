@@ -45,20 +45,19 @@ services:
     restart: unless-stopped
 
   # ─── Next.js Frontend ───────────────────────
-  # NOTE: Uncomment once Person B pushes frontend code
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - NEXT_PUBLIC_API_URL=http://localhost:8000
-  #     - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-  #     - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-  #   depends_on:
-  #     - backend
-  #   restart: unless-stopped
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+        - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 volumes:
   qdrant_data:

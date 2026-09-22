@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MessageBubble } from '@/components/MessageBubble'
@@ -40,6 +40,12 @@ export function ChatWindow({
 
   const activeKey = activeSessionId ?? DRAFT_KEY
   const messages = messagesBySession[activeKey] ?? []
+
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,44 +124,58 @@ export function ChatWindow({
       let newSessionId = submittedForSessionId
       let firstChunk = true
 
+      let buffer = ''
+
       while (true) {
         const { done, value } = await reader.read()
 
         if (done) break
 
-        const chunk = decoder.decode(value)
+        buffer += decoder.decode(value, { stream: true })
 
-        if (firstChunk) {
-          setAgentStage('done')
+        // Process complete lines from the buffer
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // keep incomplete line in buffer
 
-          setMessagesBySession((prev) => ({
-            ...prev,
-            [keyAtSubmit]: [
-              ...(prev[keyAtSubmit] ?? []),
-              {
-                role: 'assistant',
-                content: '',
-              },
-            ],
-          }))
+        for (const line of lines) {
+          if (!line.trim()) continue
 
-          firstChunk = false
-        }
+          if (firstChunk) {
+            setAgentStage('done')
 
-        if (chunk.includes('__FINAL__')) {
-          const [textPart, jsonPart] =
-            chunk.split('__FINAL__')
+            setMessagesBySession((prev) => ({
+              ...prev,
+              [keyAtSubmit]: [
+                ...(prev[keyAtSubmit] ?? []),
+                {
+                  role: 'assistant',
+                  content: '',
+                },
+              ],
+            }))
 
-          assistantText += textPart
+            firstChunk = false
+          }
 
-          try {
-            const finalData = JSON.parse(jsonPart)
+          // Vercel AI SDK Text Part: 0:"token text"
+          if (line.startsWith('0:')) {
+            try {
+              const token = JSON.parse(line.slice(2))
+              assistantText += token
+            } catch {
+              assistantText += line.slice(2)
+            }
+          }
 
-            citations = finalData.citations || []
-            newSessionId = finalData.session_id
-          } catch {}
-        } else {
-          assistantText += chunk
+          // Vercel AI SDK Data Part: 2:[{...}]
+          if (line.startsWith('2:')) {
+            try {
+              const dataArray = JSON.parse(line.slice(2))
+              const finalData = dataArray[0]
+              citations = finalData.citations || []
+              newSessionId = finalData.session_id
+            } catch {}
+          }
         }
 
         setMessagesBySession((prev) => {
@@ -302,6 +322,8 @@ export function ChatWindow({
                   stage={agentStage}
                 />
               )}
+
+            <div ref={messagesEndRef} />
 
           </div>
 

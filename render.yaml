@@ -29,3 +29,9 @@ services:
         sync: false
       - key: NCBI_API_KEY
         sync: false
+      - key: NCBI_EMAIL
+        sync: false
+      - key: GROQ_MODEL
+        value: qwen/qwen3.8-27b
+      - key: EMBEDDING_MODEL
+        value: minilm
