@@ -126,8 +126,10 @@ class LocalMiniLMEmbedder(BaseEmbedder):
     def __init__(self):
         super().__init__(dimension=MINILM_DIMENSION, model_name=MINILM_MODEL_NAME)
         from sentence_transformers import SentenceTransformer
-        logger.info(f"Loading local SentenceTransformer: {MINILM_MODEL_NAME}")
-        self.model = SentenceTransformer(MINILM_MODEL_NAME)
+        try:
+            self.model = SentenceTransformer(MINILM_MODEL_NAME, local_files_only=True)
+        except Exception:
+            self.model = SentenceTransformer(MINILM_MODEL_NAME)
 
     def embed_documents(self, texts: list[str]) -> np.ndarray:
         """Embed document chunks locally."""

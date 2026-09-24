@@ -138,7 +138,7 @@ export function ChatWindow({
         buffer = lines.pop() || '' // keep incomplete line in buffer
 
         for (const line of lines) {
-          if (!line.trim()) continue
+          if (!line.trim() || line.startsWith(':')) continue
 
           if (firstChunk) {
             setAgentStage('done')

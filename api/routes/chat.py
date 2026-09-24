@@ -95,6 +95,9 @@ async def chat_endpoint(
 
     # ── Streaming Pipeline ──────────────────────────────────────
     async def event_stream():
+        # Flush HTTP headers immediately to prevent timeout on client
+        yield ": connected\n\n"
+
         # Step 1: Supervisor classification
         initial_state: RAGState = {
             "query": user_query,

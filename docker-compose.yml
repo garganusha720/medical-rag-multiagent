@@ -19,7 +19,7 @@ services:
       - "6333:6333"    # REST API
       - "6334:6334"    # gRPC
     volumes:
-      - qdrant_data:/qdrant/storage
+      - ./data/qdrant_storage:/qdrant/storage
     environment:
       - QDRANT__SERVICE__GRPC_PORT=6334
     restart: unless-stopped
@@ -55,10 +55,11 @@ services:
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
     ports:
       - "3000:3000"
+    environment:
+      # Server-side env vars (runtime, not build-time)
+      - API_URL=http://backend:8000
+      - NEXT_PUBLIC_SITE_URL=http://localhost:3000
     depends_on:
       - backend
     restart: unless-stopped
 
-volumes:
-  qdrant_data:
-    driver: local
